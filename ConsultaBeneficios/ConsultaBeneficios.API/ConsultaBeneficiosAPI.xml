@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>ConsultaBeneficios.API</name>
+    </assembly>
+    <members>
+        <member name="M:ConsultaBeneficios.API.Controllers.BeneficiarioController.ConsultarBeneficiario(System.String)">
+            <summary>
+            Permite consultar os dados de um beneficiário através do CPF.
+            </summary>
+            <param name="cpf">CPF do Beneficiário</param>
+            <returns>Dados do beneficiário e a listagem com o número de matrícula e código dos benefícios.</returns>
+        </member>
+    </members>
+</doc>
