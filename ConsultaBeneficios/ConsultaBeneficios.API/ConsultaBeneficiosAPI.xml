@@ -4,12 +4,18 @@
         <name>ConsultaBeneficios.API</name>
     </assembly>
     <members>
-        <member name="M:ConsultaBeneficios.API.Controllers.BeneficiarioController.ConsultarBeneficiario(System.String)">
+        <member name="M:ConsultaBeneficios.API.Controllers.BeneficiarioController.BuscarBeneficiario(System.String)">
             <summary>
-            Permite consultar os dados de um beneficiário através do CPF.
+            Permite consultar os dados indexados de um beneficiário através do CPF.
             </summary>
             <param name="cpf">CPF do Beneficiário</param>
             <returns>Dados do beneficiário e a listagem com o número de matrícula e código dos benefícios.</returns>
+        </member>
+        <member name="M:ConsultaBeneficios.API.Controllers.BeneficiarioController.ListarTodosBeneficiarios">
+            <summary>
+            Permite consultar toda a base de dados indexados dos beneficiários.
+            </summary>
+            <returns>Dados dos beneficiários e a listagem com o número de matrícula e código dos benefícios.</returns>
         </member>
     </members>
 </doc>

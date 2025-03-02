@@ -1,5 +1,7 @@
 ﻿using ConsultaBeneficios.API.Extensions;
 using ConsultaBeneficios.API.KonsiClient.DTO;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Caching.Distributed;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
@@ -17,27 +19,41 @@ namespace ConsultaBeneficios.API.KonsiClient
         protected const string MIME_JSON = "application/json";
 
         private readonly HttpClient _httpClient;
+        private readonly IDistributedCache _cache;
+        private DistributedCacheEntryOptions _cacheOption;
         private readonly string _usuario;
         private readonly string _senha;
+
         private TokenResponse _token = new();
 
-        public KonsiApiClient(string url, string usuario, string senha)
+        public KonsiApiClient(string url, string usuario, string senha, IDistributedCache cache)
         {
             _httpClient = new HttpClient() { BaseAddress = new Uri(url) };
             _usuario = usuario;
             _senha = senha;
+            _cache = cache;
+            _cacheOption = new() { AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(1) };
         }
 
         public async Task<BeneficiarioResponse> ConsultarBeneficio(string cpf)
         {
-            if (!_token.Valido)
-                await DefinirTokenAsync();
+            var responseText = await _cache.GetStringAsync($"beneficiario-{cpf}");
 
-            var parametros = string.Format(PARAM_GET_CONSULTAR_BENEFICIOS_ENDPOINT, cpf);
+            if (string.IsNullOrWhiteSpace(responseText))
+            {
+                if (!_token.Valido)
+                    await DefinirTokenAsync();
 
-            var response = await _httpClient.GetAsync(string.Format("{0}{1}", CONSULTAR_BENEFICIOS_ENDPOINT, parametros));
+                var parametros = string.Format(PARAM_GET_CONSULTAR_BENEFICIOS_ENDPOINT, cpf);
 
-            var resultado = await ConverterApiResponseAsync<GenericResponse<BeneficiarioResponse>>(response);
+                var response = await _httpClient.GetAsync(string.Format("{0}{1}", CONSULTAR_BENEFICIOS_ENDPOINT, parametros));
+                responseText = await response.Content.ReadAsStringAsync();
+
+                if (!string.IsNullOrWhiteSpace(responseText))
+                    await _cache.SetStringAsync($"beneficiario-{cpf}", responseText, _cacheOption);
+            }
+
+            var resultado = await ConverterApiResponseAsync<GenericResponse<BeneficiarioResponse>>(responseText);
 
             if (resultado != null && resultado.Sucesso)
             {
@@ -70,7 +86,7 @@ namespace ConsultaBeneficios.API.KonsiClient
 
             using (var content = new StringContent(credenciaisJson, Encoding.UTF8, MIME_JSON))
             {
-                var response = await _httpClient.PostAsync(TOKEN_ENDPOINT, content);
+                var response = await (await _httpClient.PostAsync(TOKEN_ENDPOINT, content)).Content.ReadAsStringAsync();
 
                 var resultado = await ConverterApiResponseAsync<GenericResponse<TokenResponse>>(response);
 
@@ -83,10 +99,9 @@ namespace ConsultaBeneficios.API.KonsiClient
             }
         }
 
-        protected async Task<T> ConverterApiResponseAsync<T>(HttpResponseMessage httpResponse)
+        protected async Task<T> ConverterApiResponseAsync<T>(string responseText)
         {
             T apiResponse;
-            var responseText = await httpResponse.Content.ReadAsStringAsync();
 
             try
             {
